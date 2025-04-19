@@ -16,7 +16,7 @@ import bodyParser from "body-parser";
 
 mongoose
   .connect(
-    "mongodb+srv://bapasjakpuswebsite:FirdaAmalia2019!@cluster0.9vzsvra.mongodb.net/DevWhatsappClientManager",
+    "mongodb+srv://bapasjakpuswebsite:FirdaAmalia2019!@cluster0.9vzsvra.mongodb.net/WhatsappClientManager",
     {}
   )
   .then(() => console.log("MongoDB connected successfully"))
@@ -443,7 +443,7 @@ app.get("/index.html", isAuthenticated, (req, res) => {
   res.sendFile(path.join(__dirname, "protected", "index.html"));
 });
 
-app.get("/register.html", (req, res) => {
+app.get("/register.html", isAuthenticated, isAuthorized("admin"), (req, res) => {
   res.sendFile(path.join(__dirname, "protected", "register.html"));
 });
 
