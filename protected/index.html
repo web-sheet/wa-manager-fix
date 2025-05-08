@@ -3,14 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Websheetweb Whatsapp Manager</title>
+    <title>WeSsheet WhatsApp Manager</title>
+
+    <base href="" />
     <link rel="icon" href="waicon.png" type="image/x-icon" />
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="css.css" />
+
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+
+    <link rel="stylesheet" src="css-index.css" />
     <script src="/socket.io/socket.io.js"></script>
+
     <script>
       window.onload = async () => {
         const socket = io();
@@ -26,53 +35,46 @@
         const userTypeData = await userTypeResponse.json();
         const userType = userTypeData.userType;
 
-        document.querySelector(
-          "h3"
-        ).innerText = `Scan QR Code WhatsApp - ${userType}`;
+        const headerElement = document.querySelector("h4");
+
+        // Update the inner text of the h3 element
+        headerElement.innerText = `Scan QR Code WhatsApp - ${userType}`;
+        headerElement.classList.add("black");
 
         if (userType === "admin") {
           for (const client of clients) {
             const row = document.createElement("tr");
 
             row.innerHTML = `
-            <td>${index}</td>
-            <td>${client.number}</td>         
-            <td>${client.time}</td>
-            <td><input style="width:150px;" type="text"  id="webhookUrl_${
-              client.number
-            }" placeholder="Webhook URL" value="${client.webhookUrl || ""}" />
-                <button class="btn btn-success" onclick="updateWebhook('${
+                <td>${index}</td>
+                <td>${client.number}</td>
+                <td>${client.time}</td>
+                <td><input style="width:125px;" type="text"  id="webhookUrl_${
                   client.number
-                }')">Set Webhook</button></td>
-            <td>               
+                }" placeholder="Webhook URL" value="${
+              client.webhookUrl || ""
+            }" />
+                    <button class="btn btn-success" onclick="updateWebhook('${
+                      client.number
+                    }')">Set</button>
+                    </td>
 
-                <select id="jenisPesan_${
-                  client.number
-                }" style="height:35px;" aria-label="Default select example" value="${
-              client.jenisPesan || ""
-            }">
-                  <option value="${client.jenisPesan || ""}" > ${
-              client.jenisPesan || ""
-            } </option>
-                  <option value="location">location</option>
-                  <option value="chat">chat</option>    
-                  <option value=""></option>                  
-                  </select>               
-                                
-              <button class="btn btn-success" onclick="updateJenisPesan('${
-                client.number
-              }')">
-                Set Pesan
-                </button></td>
-            <td>
-                <button class="btn btn-danger" onclick="logoutClient('${
-                  client.number
-                }')">Logout</button>
-                <button class="btn btn-warning" onclick="deleteClient('${
-                  client.number
-                }')">Delete</button>
-            </td>
-                `;
+                                     <td><input style="width:125px;" type="text"  id="sheetUrl_${
+                                       client.number
+                                     }" placeholder="Google Sheet URL" value="${
+              client.sheetUrl || ""
+            }" />
+                    <button class="btn btn-success" onclick="updateSheetUrl('${
+                      client.number
+                    }')">Set</button>
+                    </td>
+
+                <td>
+                    <button class="btn btn-warning" onclick="deleteClient('${
+                      client.number
+                    }')">Delete</button>
+                </td>
+                    `;
             clientsTableBody.appendChild(row);
             index++;
           }
@@ -85,52 +87,70 @@
             const row = document.createElement("tr");
 
             row.innerHTML = `
-            <td>${index}</td>
-            <td>${client.number}</td>         
-            <td>${client.time}</td>
-            <td><input style="width:150px;" type="text"  id="webhookUrl_${
-              client.number
-            }" placeholder="Webhook URL" value="${client.webhookUrl || ""}" />
-                <button class="btn btn-success" onclick="updateWebhook('${
+                <td>${index}</td>
+                <td>${client.number} (${client.userType}) </td>
+                <td>${client.time}</td>
+                <td> <input style="width:125px;" type="text"  id="webhookUrl_${
                   client.number
-                }')">Set Webhook</button></td>
-            <td>               
+                }" placeholder="Webhook URL" value="${
+              client.webhookUrl || ""
+            }" />
+                    <button class="btn btn-success" onclick="updateWebhook('${
+                      client.number
+                    }')"><i class="fa-solid fa-gear"></i> Set Webhook</button></td>
 
-                <select id="jenisPesan_${
-                  client.number
-                }" style="height:35px;" aria-label="Default select example" value="${
-              client.jenisPesan || ""
-            }">
-                  <option value="${client.jenisPesan || ""}" > ${
-              client.jenisPesan || ""
-            } </option>
-                  <option value="location">location</option>
-                  <option value="chat">chat</option>    
-                  <option value=""></option>                  
-                  </select>               
-                                
-              <button class="btn btn-success" onclick="updateJenisPesan('${
-                client.number
-              }')">
-                Set Pesan
-                </button></td>
-            <td>
-                <button class="btn btn-danger" onclick="logoutClient('${
-                  client.number
-                }')">Logout</button>
-                <button class="btn btn-warning" onclick="deleteClient('${
-                  client.number
-                }')">Delete</button>
-            </td>
-        `;
+
+                     <td><input style="width:125px;" type="text"  id="sheetUrl_${
+                       client.number
+                     }" placeholder="Google Sheet URL" value="${
+              client.sheetUrl || ""
+            }" />
+                    <button class="btn btn-success" onclick="updateSheetUrl('${
+                      client.number
+                    }')"><i class="fa-solid fa-gear"></i> Set GSheets</button>
+                    </td>
+
+
+
+
+                
+                <td>
+
+                    <button class="btn btn-warning" onclick="deleteClient('${
+                      client.number
+                    }')"><i class="fa-solid fa-trash"></i> Delete</button>
+                    <button class="btn btn-danger" onclick="logoutClient('${
+                      client.userType
+                    }')"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+                </td>
+            `;
             clientsTableBody.appendChild(row);
             index++;
+
+            const sheetLink = document.getElementById("sheetLink");
+            const url =
+              client.sheetUrl.startsWith("http://") ||
+              client.sheetUrl.startsWith("https://")
+                ? client.sheetUrl
+                : "https://" + client.sheetUrl;
+            sheetLink.href = url;
+            sheetLink.target = "_blank";
           }
         }
+
+        // Add event listener to the button to show the modal
+        // when clicked
 
         document.getElementById("initializeClientBtn").onclick = () => {
           const modal = new bootstrap.Modal(
             document.getElementById("authModal")
+          );
+          modal.show(); // Show the modal
+        };
+
+        document.getElementById("reInitializeClientBtn").onclick = () => {
+          const modal = new bootstrap.Modal(
+            document.getElementById("authModalReinitialize")
           );
           modal.show(); // Show the modal
         };
@@ -152,9 +172,9 @@
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                clientNumber,
                 username,
                 password,
+                userType,
               }),
             });
 
@@ -179,6 +199,52 @@
           }
         };
 
+        document.getElementById("confirmConnectDeviceBtn").onclick =
+          async () => {
+            const clientNumber = `client_${
+              document.querySelectorAll("tr").length + 1
+            }`;
+            const username = document.getElementById("username_2").value;
+            const password = document.getElementById("password_2").value;
+            document.getElementById("loadingSpinner_2").style.display =
+              "inline-block";
+            document.getElementById("confirmConnectDeviceBtn").disabled = true; // Disable the button to prevent multiple clicks
+            document.getElementById("username_2").disabled = true; // Disable the username input
+            document.getElementById("password_2").disabled = true; // Disable the password input
+
+            try {
+              const response = await fetch("/reInitializeClient", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  username,
+                  password,
+                  userType,
+                }),
+              });
+
+              if (!response.ok) {
+                const errorData = await response.json();
+                alert(errorData.error); // Show error message to the user
+              } else {
+                const resultData = await response.json();
+                showNotification(resultData.result); // Show success message
+              }
+            } catch (error) {
+              console.error("Error initializing client:", error);
+              alert(
+                "An unexpected error occurred while ReInitializing the client."
+              );
+            } finally {
+              document.getElementById("loadingSpinner_2").style.display =
+                "none";
+              const modal = bootstrap.Modal.getInstance(
+                document.getElementById("authModalReinitialize")
+              );
+              modal.hide(); // Hide the modal
+            }
+          };
+
         // Function to show notification
         function showNotification(message) {
           const notification = document.getElementById("notification");
@@ -194,6 +260,7 @@
         socket.on("qr", (qr) => {
           document.getElementById("loadingSpinner").style.display = "none";
           const qrCodeContainer = document.getElementById("qrcode");
+
           const img = document.createElement("img");
           img.src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(
             qr.qr
@@ -201,33 +268,116 @@
           img.classList.add("img-fluid");
           qrCodeContainer.innerHTML = "";
           qrCodeContainer.appendChild(img);
+          qrCodeContainer.innerHTML +=
+            '<p style="margin:16px;">Silahkan Scan QR Code diatas. QR Code akan kadaluwarsa dalam 60 detik.</hp>';
         });
 
-        socket.on("userLoggedIn", (data) => {
+        socket.on("userLoggedIn", async (data) => {
           const qrCodeContainer = document.getElementById("qrcode");
-          qrCodeContainer.innerHTML =
-            '<h4 class="text-success">Connected. Silahkan reload halaman.</h4>';
+          qrCodeContainer.innerHTML = "";
+          // '<h4 class="text-success">Connected. Silahkan reload halaman.</h4>';
 
           const notificationArea = document.getElementById("notifications");
           const notification = document.createElement("div");
           notification.classList.add("alert", "alert-info");
-          notification.innerText = `User ${data.number} is currently online since ${data.time}`;
+          notification.innerText = `Connected. User ${data.number} is currently online since ${data.time}`;
           notificationArea.appendChild(notification);
           updateClientStatus(data.number, "online", data.time);
+          await window.onload(); // Refresh the client list
         });
 
-        socket.on("userDisconnected", (data) => {
-          const qrCodeContainer = document.getElementById("qrcode");
-          qrCodeContainer.innerHTML =
-            '<h4 class="text-danger">Disconnected</h4>';
+        socket.on("userDisconnected", async (data) => {
+          // const qrCodeContainer = document.getElementById("qrcode");
+          // qrCodeContainer.innerHTML =
+          //   '<h4 class="text-danger">Disconnected</h4>';
 
           const notificationArea = document.getElementById("notifications");
           const notification = document.createElement("div");
           notification.classList.add("alert", "alert-danger");
-          notification.innerText = `User ${data.number} has disconnected.`;
+          notification.innerText = `User ${data.userType} has disconnected.`;
           notificationArea.appendChild(notification);
-          updateClientStatus(data.number, "offline");
+          await window.onload(); // Refresh the client list
+          updateClientStatus(data.userType, "offline");
         });
+
+        socket.on("qrExpired", (data) => {
+          const qrCodeContainer = document.getElementById("qrcode");
+          qrCodeContainer.innerHTML = "";
+          // '<h5 class="text-danger m-3">QR Code Kadaluwarsa. Silahkan reload halaman dan klik Add Device kembali.</h5>';
+          const notificationArea = document.getElementById("notifications");
+          const notification = document.createElement("div");
+          notification.classList.add("alert", "alert-danger");
+          notification.innerText = `QR Code Kadaluwarsa untuk ${data.userType}. Silahkan reload halaman dan klik Connect Device kembali.`;
+          notificationArea.appendChild(notification);
+        });
+
+        document
+          .getElementById("fetchGroupDetails")
+          .addEventListener("click", async () => {
+            // Fetch the user type from the server
+            const userTypeResponse = await fetch("/userType");
+            const userTypeData = await userTypeResponse.json();
+            const userType = userTypeData.userType;
+
+            // Determine the client number based on user type
+            const clientNumberResponse = await fetch(`/clients`);
+            const clientsData = await clientNumberResponse.json();
+            const clientNumber = clientsData.find(
+              (client) => client.userType === userType
+            )?.userType;
+
+            const loadingSpinnerGroup = document.getElementById(
+              "loadingSpinnerGroup"
+            );
+            const groupTableBody = document.getElementById("groupTableBody");
+
+            // Show the loading spinner
+            loadingSpinnerGroup.style.display = "block";
+
+            document.getElementById("fetchGroupDetails").disabled = true; // Disable the button to prevent multiple clicks
+            groupTableBody.innerHTML = ""; // Clear previous entries
+
+            try {
+              const response = await fetch(`/group-details/${clientNumber}`);
+
+              // Check if the response is ok (status in the range 200-299)
+              if (!response.ok) {
+                throw new Error("Network response was not ok");
+              }
+
+              const data = await response.json();
+
+              if (data.error) {
+                groupTableBody.innerHTML = `<tr><td colspan="3" class="text-danger">${data.error}</td></tr>`;
+              } else {
+                let counter = 1; // Initialize counter for auto-numbering
+                data.forEach((group) => {
+                  groupTableBody.innerHTML += `
+            <tr>
+              <td style="text-align: center;">${counter++}</td>
+              <td>${group.name}</td>
+              <td>${group.id}</td>
+            </tr>
+          `;
+                });
+              }
+            } catch (error) {
+              groupTableBody.innerHTML = `<tr><td colspan="3" class="text-danger">Failed to fetch group details: ${error.message}</td></tr>`;
+            } finally {
+              // Hide the loading spinner
+              loadingSpinnerGroup.style.display = "none";
+            }
+          });
+
+        async function deleteAllClients() {
+          const response = await fetch(`/deleteAllClients`, {
+            method: "DELETE",
+          });
+          if (!response.ok) {
+            throw new Error("Failed to delete client");
+          }
+          window.onload();
+        }
       };
 
       function updateClientStatus(clientNumber, status, time = "") {
@@ -249,6 +399,7 @@
         const webhookUrl = document.getElementById(
           `webhookUrl_${clientNumber}`
         ).value;
+
         try {
           const response = await fetch(`/updateWebhook`, {
             method: "POST",
@@ -323,8 +474,62 @@
         }
       }
 
-      async function logoutClient(clientNumber) {
-        await fetch(`/logout/${clientNumber}`, { method: "POST" });
+      async function updateSheetUrl(clientNumber) {
+        const sheetUrl = document.getElementById(
+          `sheetUrl_${clientNumber}`
+        ).value;
+        try {
+          const response = await fetch(`/updatesheetUrl`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              clientNumber,
+              sheetUrl,
+            }),
+          });
+
+          const result = await response.json();
+          const notificationArea = document.getElementById("notifications");
+          const notification = document.createElement("div");
+
+          if (response.ok) {
+            notification.classList.add("alert", "alert-success");
+            notification.innerText = result.result; // Success message
+          } else {
+            notification.classList.add("alert", "alert-danger");
+            notification.innerText = result.error; // Error message
+          }
+
+          notificationArea.appendChild(notification);
+          window.onload(); // Refresh the client list
+        } catch (error) {
+          console.error(`Error during jenis pesan update: ${error.message}`);
+          const notificationArea = document.getElementById("notifications");
+          const notification = document.createElement("div");
+          notification.classList.add("alert", "alert-danger");
+          notification.innerText =
+            "An unexpected error occurred while updating the webhook.";
+          notificationArea.appendChild(notification);
+        }
+      }
+
+      function isValidUrl(url) {
+        const pattern = new RegExp(
+          "^(https?:\\/\\/)?" + // protocol
+            "((([a-z\\d]([a-z\\d-]*[a-z\\d])?)\\.)+[a-z]{2,}|" + // domain name
+            "localhost|" + // localhost
+            "\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|" + // IP address
+            "\\[?[a-fA-F0-9]*:[a-fA-F0-9:]+\\]?)" + // IPv6
+            "(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*" + // port and path
+            "(\\?[;&a-z\\d%_.~+=-]*)?" + // query string
+            "(\\#[-a-z\\d_]*)?$",
+          "i"
+        ); // fragment locator
+        return !!pattern.test(url);
+      }
+
+      async function logoutClient(userType) {
+        await fetch(`/logout/${userType}`, { method: "POST" });
         window.onload();
       }
 
@@ -348,17 +553,136 @@
         }
       }
     </script>
+    <style>
+      .spinner-group {
+        display: none; /* Initially hidden */
+        border: 4px solid rgba(0, 0, 0, 0.1);
+        border-left-color: green; /* Bootstrap primary color */
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto; /* Center the spinner */
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      #loadingSpinner {
+        display: none; /* Initially hidden */
+        width: 20px;
+        height: 20px;
+        color: green
+      }
+
+      #loadingSpinner_2 {
+        display: none; /* Initially hidden */
+        width: 20px;
+        height: 20px;
+        color: green;
+      }
+
+      #notifications {
+        position: absolute;
+        top: 80px;
+        right: 20px;
+        width: 300px;
+        z-index: 1000;
+      }
+
+      .rectangle-box {
+        margin-top: 20px;
+      
+        padding: 20px; /* Padding inside the box */
+        border-radius: 5px; /* Rounded corners */
+        background-color: white
+      }
+      .black-text {
+            color: black;
+        }
+    </style>
   </head>
   <body>
+    <nav class="navbar navbar-expand-lg bg-primary">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="#" style="color: white"
+          >WebSheet WhatsApp Manager</a
+        >
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+          aria-controls="navbarNav"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav">
+            <li class="nav-item">
+              <a
+                class="nav-link active"
+                aria-current="page"
+                href="/index.html"
+                style="color: white"
+                >Home</a
+              >
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/about.html" style="color: white"
+                >About</a
+              >
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/contact.html" style="color: white"
+                >Contact</a
+              >
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/docs.html" style="color: white"
+                >Docs</a
+              >
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
     <div class="container">
-      <h3 class="m-3 text-center"></h3>
+      <div class="rectangle-box">
+        <h4 class="text-start"></h4>
+      </div>
+      <p style="margin: 5px;">WebSheet WA Manager kini punya layanan WhatsApp AI Assistance yang terintegrasi dengan AI Chat GPT. Hubungi kami untuk mencoba.</a>
       <br /><br />
-      <button id="initializeClientBtn" class="btn btn-primary">
-        Add Device
-      </button>
-      <a href="http://websheetapp.space:9000/sendMessagePage">
-        <button class="btn btn-primary">Kirim Pesan</button>
-      </a>
+      <div class="container mt-4">
+        <div class="d-flex justify-content-between">
+          <div>
+            <button id="initializeClientBtn" class="btn btn-primary me-2">
+              <i class="fas fa-plus"></i> Add Device
+            </button>
+            <a href="http://localhost:9000/sendMessagePage" class="me-2">
+              <button class="btn btn-success">
+                <i class="fas fa-paper-plane"></i> Kirim Pesan
+              </button>
+            </a>
+            <a href="" id="sheetLink" class="me-2">
+              <button class="btn btn-success">
+                <i class="fas fa-table"></i> Go to GSheet URL
+              </button>
+            </a>
+          </div>
+          <button id="reInitializeClientBtn" class="btn btn-primary">
+            <i class="fas fa-redo"></i> Reconnect Device
+          </button>
+        </div>
+      </div>
+
+   
 
       <table class="table mt-3">
         <thead>
@@ -367,7 +691,7 @@
             <th>Nomor HP</th>
             <th>Waktu Login</th>
             <th>Webhook URL</th>
-            <th>Jenis Pesan</th>
+            <th>Sheets URL</th>
             <th>Aksi</th>
           </tr>
         </thead>
@@ -375,6 +699,28 @@
       </table>
       <div id="qrcode" class="text-center mt-3"></div>
       <div id="notifications" class="mt-3"></div>
+
+      <div class="container mt-5">
+        <button id="fetchGroupDetails" class="btn btn-primary">
+          <i class="fa-solid fa-square-phone"></i> Fetch Group Details
+        </button>
+        <div id="loadingSpinnerGroup" class="spinner-group"></div>
+        <!-- Loading spinner -->
+        <div id="groupInfo" class="mt-3">
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th style="width: 3.5rem; text-align: center">No</th>
+                <th>Nama Grup</th>
+                <th>ID Grup</th>
+              </tr>
+            </thead>
+            <tbody id="groupTableBody">
+              <!-- Group details will be populated here -->
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       <div style="margin-top: 210px">
         <footer class="text-center text-lg-start text-muted">
@@ -445,7 +791,7 @@
             </button>
             <button
               type="button"
-              class="btn btn-secondary"
+              class="btn btn-warning"
               data-bs-dismiss="modal"
             >
               Cancel
@@ -454,6 +800,69 @@
         </div>
       </div>
     </div>
+
+    <!-- Bootstrap Modal for Authentication -->
+    <div
+      class="modal fade"
+      id="authModalReinitialize"
+      tabindex="-1"
+      aria-labelledby="authModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header align-items-center">
+            <p class="modal-title text-center" id="authModalLabel">
+              Masukkan kembali username dan password
+            </p>
+
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <input
+              id="username_2"
+              class="form-control mb-2"
+              type="text"
+              placeholder="Username"
+              required
+            />
+            <input
+              id="password_2"
+              class="form-control mb-2"
+              type="password"
+              placeholder="Password"
+              required
+            />
+          </div>
+          <div class="modal-footer">
+            <button id="confirmConnectDeviceBtn" class="btn btn-success">
+              Reconnect Device
+              <div
+                id="loadingSpinner_2"
+                class="spinner-border text-primary ms-2"
+                role="status"
+                style="display: none"
+              >
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            </button>
+            <button
+              type="button"
+              class="btn btn-warning"
+              data-bs-dismiss="modal"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div
       id="notification"
       style="
