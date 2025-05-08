@@ -6,6 +6,7 @@ const userSchema = new mongoose.Schema({
   time: { type: String },
   status: { type: String, default: 'offline' },
   webhookUrl: { type: String },
+  sheetUrl: { type: String },
   jenisPesan : { type: String },
   userType: { type: String, required: true }   
 });
