@@ -15,11 +15,13 @@ import cors from "cors";
 import bodyParser from "body-parser";
 import fs from "fs";
 import axios from "axios";
+import os from "os";
+
  
 
 mongoose
   .connect(
-    "mongodb+srv://bapasjakpuswebsite:FirdaAmalia2019!@cluster0.9vzsvra.mongodb.net/DevWhatsappClientManager",
+    "mongodb+srv://bapasjakpuswebsite:FirdaAmalia2019!@cluster0.9vzsvra.mongodb.net/WhatsappClientManagerNew",
     {}
   )
   .then(() => {
@@ -55,7 +57,7 @@ app.use(
     saveUninitialized: false,
     store: MongoStore.create({
       mongoUrl:
-        "mongodb+srv://bapasjakpuswebsite:FirdaAmalia2019!@cluster0.9vzsvra.mongodb.net/whatsappClientManager",
+        "mongodb+srv://bapasjakpuswebsite:FirdaAmalia2019!@cluster0.9vzsvra.mongodb.net/WhatsappClientManagerNew",
     }),
     cookie: { maxAge: 180 * 60 * 1000 },
   })
@@ -75,7 +77,7 @@ async function initializeClient(userType) {
     puppeteer: {
       headless: "new",
       args: [
-        "--no-sandbox",
+          "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-accelerated-2d-canvas",
         "--disable-gpu",
@@ -89,7 +91,7 @@ async function initializeClient(userType) {
         "--disable-renderer-backgrounding",
         "--disable-infobars",
         "--autoplay-policy=user-gesture-required",
-        "--window-size=1024,768",
+        "--window-size=1024,768", 
       ],
     },
   });
@@ -105,7 +107,7 @@ async function initializeClient(userType) {
         console.log(`QR code for client ${userType} has expired.`);
         io.emit("qrExpired", { userType });
         client.destroy();
-      }, 70000);
+      }, 200000);
     }
   });
 
@@ -184,7 +186,7 @@ async function initializeClient(userType) {
   });
 
   let userSessions = {};
-  const sessionTimeout = 1 * 60 * 1000; // 5 minutes
+  const sessionTimeout = 5 * 60 * 1000; // 5 minutes
 
   client.on("message_create", async (message) => {
     if (message.from === client.info.wid._serialized) {
@@ -412,6 +414,236 @@ app.post("/sendMessage", async (req, res) => {
   }
 });
 
+
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+app.post("/sendAppsheetDirect", async (req, res) => {
+  let { sender, to, imageUrls = [], captions = [] } = req.body;
+
+  if (!sender || !to || (Array.isArray(to) && to.length === 0)) {
+    return res
+      .status(400)
+      .send({ error: "Sender and at least one recipient are required." });
+  }
+
+  const client = clients[sender];
+  if (!client) {
+    return res.status(404).send({ error: "Sender not found." });
+  }
+
+  // --- Samakan panjang captions dengan imageUrls ---
+  if (captions.length < imageUrls.length) {
+    captions = [
+      ...captions,
+      ...Array(imageUrls.length - captions.length).fill(""),
+    ];
+  }
+
+  const recipients = Array.isArray(to) ? to : [to];
+
+  try {
+    for (let recipient of recipients) {
+      let formattedRecipient = recipient.includes("@g.us")
+        ? recipient
+        : `${recipient}@c.us`;
+
+      if (imageUrls.length === 0) {
+        await client.sendMessage(
+          formattedRecipient,
+          captions[0] || "Tidak ada gambar untuk dikirim."
+        );
+        continue;
+      }
+
+      for (let i = 0; i < imageUrls.length; i++) {
+        const url = imageUrls[i];
+        if (!url) continue;
+
+        try {
+          const response = await fetch(url);
+          if (!response.ok) throw new Error(`Gagal fetch ${url}`);
+
+          const buffer = await response.buffer();
+          const caption = captions[i] ?? "";
+
+          // Hybrid mode: < 500 KB pakai RAM, kalau lebih pakai file
+          if (buffer.length < 500 * 1024) {
+            const media = new MessageMedia(
+              response.headers.get("content-type"),
+              buffer.toString("base64"),
+              `image_${Date.now()}.jpg`
+            );
+            await client.sendMessage(formattedRecipient, media, { caption });
+          } else {
+            const tempPath = path.join(
+              os.tmpdir(),
+              `image_${Date.now()}_${Math.random()
+                .toString(36)
+                .substring(2, 8)}.jpg`
+            );
+
+            fs.writeFileSync(tempPath, buffer);
+
+            const media = MessageMedia.fromFilePath(tempPath);
+            await client.sendMessage(formattedRecipient, media, { caption });
+
+            fs.unlinkSync(tempPath);
+          }
+
+          // Tambah jeda antar pesan (contoh: 1 detik)
+          await delay(1000);
+        } catch (err) {
+          console.error(
+            `Gagal kirim gambar ke ${formattedRecipient} dari URL ${url}:`,
+            err.message
+          );
+          continue; // kalau gagal, caption sejajar juga skip
+        }
+      }
+    }
+
+    res.status(200).send({ result: "Messages sent to all recipients." });
+  } catch (error) {
+    console.error("Error sending AppSheet images:", error);
+    res.status(500).send({ error: "Failed to send AppSheet images." });
+  }
+});
+
+// TES QUEUE
+// --- Queue per session ---
+const sessionQueues = {};
+
+function addToQueue(sessionId, taskFn) {
+  if (!sessionQueues[sessionId]) {
+    sessionQueues[sessionId] = [];
+  }
+
+  sessionQueues[sessionId].push(taskFn);
+
+  if (sessionQueues[sessionId].length === 1) {
+    processQueue(sessionId);
+  }
+}
+
+async function processQueue(sessionId) {
+  if (!sessionQueues[sessionId] || sessionQueues[sessionId].length === 0)
+    return;
+
+  const taskFn = sessionQueues[sessionId][0];
+
+  try {
+    await taskFn();
+  } catch (err) {
+    console.error("Error processing task in queue:", err.message);
+  }
+
+  // hapus task selesai
+  sessionQueues[sessionId].shift();
+
+  if (sessionQueues[sessionId].length > 0) {
+    processQueue(sessionId);
+  }
+}
+
+// --- Endpoint utama ---
+app.post("/sendAppsheet", async (req, res) => {
+  let { sender, to, imageUrls = [], captions = [] } = req.body;
+
+  if (!sender || !to || (Array.isArray(to) && to.length === 0)) {
+    return res
+      .status(400)
+      .send({ error: "Sender and at least one recipient are required." });
+  }
+
+  const client = clients[sender];
+  if (!client) {
+    return res.status(404).send({ error: "Sender not found." });
+  }
+
+  // --- Samakan panjang captions dengan imageUrls ---
+  if (captions.length < imageUrls.length) {
+    captions = [
+      ...captions,
+      ...Array(imageUrls.length - captions.length).fill(""),
+    ];
+  }
+
+  const recipients = Array.isArray(to) ? to : [to];
+
+  // --- masukkan ke queue per session ---
+  addToQueue(sender, async () => {
+    try {
+      for (let recipient of recipients) {
+        let formattedRecipient = recipient.includes("@g.us")
+          ? recipient
+          : `${recipient}@c.us`;
+
+        if (imageUrls.length === 0) {
+          await client.sendMessage(
+            formattedRecipient,
+            captions[0] || "Tidak ada gambar untuk dikirim."
+          );
+          continue;
+        }
+
+        for (let i = 0; i < imageUrls.length; i++) {
+          const url = imageUrls[i];
+          if (!url) continue;
+
+          try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`Gagal fetch ${url}`);
+
+            const buffer = await response.buffer();
+            const caption = captions[i] ?? "";
+
+            // Hybrid mode: < 500 KB pakai RAM, kalau lebih pakai file
+            if (buffer.length < 500 * 1024) {
+              const media = new MessageMedia(
+                response.headers.get("content-type"),
+                buffer.toString("base64"),
+                `image_${Date.now()}.jpg`
+              );
+              await client.sendMessage(formattedRecipient, media, { caption });
+            } else {
+              const tempPath = path.join(
+                os.tmpdir(),
+                `image_${Date.now()}_${Math.random()
+                  .toString(36)
+                  .substring(2, 8)}.jpg`
+              );
+              fs.writeFileSync(tempPath, buffer);
+
+              const media = MessageMedia.fromFilePath(tempPath);
+              await client.sendMessage(formattedRecipient, media, { caption });
+
+              fs.unlinkSync(tempPath);
+            }
+
+            // Tambah jeda antar pesan (contoh: 1 detik)
+            await delay(1000);
+          } catch (err) {
+            console.error(
+              `Gagal kirim gambar ke ${formattedRecipient} dari URL ${url}:`,
+              err.message
+            );
+            continue; // kalau gagal, caption sejajar juga skip
+          }
+        }
+      }
+
+      console.log(`[Queue] Pesan dari session ${sender} selesai diproses.`);
+    } catch (error) {
+      console.error("Error sending AppSheet images:", error);
+    }
+  });
+
+  res.status(200).send({ result: "Pesan masuk ke antrian untuk diproses." });
+});
+
 app.post("/sendMedia", async (req, res) => {
   const { sender, to, message, name, captions } = req.body;
 
@@ -455,6 +687,103 @@ app.post("/sendMedia", async (req, res) => {
     res.status(500).send({ error: "Failed to send message." });
   }
 });
+
+
+
+
+app.post("/sendAppsheetTest", async (req, res) => {
+  let { sender, to, imageUrls = [], captions = [] } = req.body;
+
+  if (!sender || !to || (Array.isArray(to) && to.length === 0)) {
+    return res
+      .status(400)
+      .send({ error: "Sender and at least one recipient are required." });
+  }
+
+  const client = clients[sender];
+  if (!client) {
+    return res.status(404).send({ error: "Sender not found." });
+  }
+
+  // --- Samakan panjang captions dengan imageUrls ---
+  if (captions.length < imageUrls.length) {
+    captions = [
+      ...captions,
+      ...Array(imageUrls.length - captions.length).fill(""),
+    ];
+  }
+
+  const recipients = Array.isArray(to) ? to : [to];
+
+  try {
+    for (let recipient of recipients) {
+      let formattedRecipient = recipient.includes("@g.us")
+        ? recipient
+        : `${recipient}@c.us`;
+
+      if (imageUrls.length === 0) {
+        await client.sendMessage(
+          formattedRecipient,
+          captions[0] || "Tidak ada gambar untuk dikirim."
+        );
+        continue;
+      }
+
+      for (let i = 0; i < imageUrls.length; i++) {
+        const url = imageUrls[i];
+        if (!url) continue;
+
+        try {
+          const response = await fetch(url);
+          if (!response.ok) throw new Error(`Gagal fetch ${url}`);
+
+          const buffer = await response.buffer();
+          const caption = captions[i] ?? "";
+
+          // Hybrid mode: < 500 KB pakai RAM, kalau lebih pakai file
+          if (buffer.length < 500 * 1024) {
+            const media = new MessageMedia(
+              response.headers.get("content-type"),
+              buffer.toString("base64"),
+              `image_${Date.now()}.jpg`
+            );
+            await client.sendMessage(formattedRecipient, media, { caption });
+          } else {
+            const tempPath = path.join(
+              os.tmpdir(),
+              `image_${Date.now()}_${Math.random()
+                .toString(36)
+                .substring(2, 8)}.jpg`
+            );
+
+            fs.writeFileSync(tempPath, buffer);
+
+            const media = MessageMedia.fromFilePath(tempPath);
+            await client.sendMessage(formattedRecipient, media, { caption });
+
+            fs.unlinkSync(tempPath);
+          }
+
+          // Tambah jeda antar pesan (contoh: 1 detik)
+          await delay(1000);
+        } catch (err) {
+          console.error(
+            `Gagal kirim gambar ke ${formattedRecipient} dari URL ${url}:`,
+            err.message
+          );
+          continue; // kalau gagal, caption sejajar juga skip
+        }
+      }
+    }
+
+    res.status(200).send({ result: "Messages sent to all recipients." });
+  } catch (error) {
+    console.error("Error sending AppSheet images:", error);
+    res.status(500).send({ error: "Failed to send AppSheet images." });
+  }
+});
+
+
 
 app.post("/sendDrivePdf", async (req, res) => {
   const { sender, to, document, name, captions } = req.body;
@@ -896,7 +1225,7 @@ async function getOpenAIResponse(userMessage, database) {
       },
       {
         headers: {
-          Authorization: `Bearer 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`,
+          Authorization: `Bearer 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`,
           "Content-Type": "application/json",
         },
       }
@@ -919,7 +1248,7 @@ async function getChatGPTResponse(userInput) {
     },
     {
       headers: {
-        Authorization: `Bearer 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`,
+        Authorization: `Bearer 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`,
         "Content-Type": "application/json",
       },
     }
